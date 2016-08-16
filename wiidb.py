@@ -5,7 +5,12 @@ import urllib3
 import xml.etree.ElementTree as ElementTree
 import zipfile
 
-wiitdb_zip_url = 'http://www.gametdb.com/wiitdb.zip?LANG=EN&WIIWARE=1&GAMECUBE=1'
+# TODO: Add option to display probable database errors such as empty version strings
+#   and malformatted names.
+
+# This is currently only designed to handle disc images, so wiiware titles
+#   are just extra junk to process for now.
+wiitdb_zip_url = 'http://www.gametdb.com/wiitdb.zip?LANG=EN&GAMECUBE=1'
 
 class WiiDB:
     def __init__(self, wiidb_file='./wiidb.json'):
@@ -14,7 +19,7 @@ class WiiDB:
         self.game_data = {}
         self.hash_index = []
 
-        self.version_regex = re.compile('[1-9]+\.[1-9]+')
+        self.version_regex = re.compile('[0-9]+\.[0-9]+')
         self.disc_number_regex = re.compile('(D|d)isc( |)[0-2]')
 
     def get_game_data(self, gameid=None, crc=None, md5=None, sha1=None):
@@ -44,72 +49,110 @@ class WiiDB:
 
             game_info['versions'] = self._divine_version_information(game_element.findall('./rom'))
 
-            
-            # TODO: Debug code. Remove.
-            if game_info['versions'] is not None:
-                if len(game_info['versions'].keys()) > 1 :
-                    print(game_info)
-
     def _divine_version_information(self, rom_elements):
         # Sweet holy mother of Yoshis the version/disc information in this database is awful.
         game_versions = {}
-        if len(rom_elements) > 1:
+        disc_total = len(rom_elements)
+        if disc_total > 1:
             # Is it multiple versions? Is it multiple discs? Gametdb doesn't say,
             #   so we have to guess from the "version" name...
-            first_disc_name = rom_elements[0].get('version')
-            disc_version = self.version_regex.search(first_disc_name)
-            disc_number = self.disc_number_regex.search(first_disc_name)
+            first_disc_version = ''
+            # Some of these disc entries have no version name. It looks like gametdb.com needs moderators.
+            for rom_element in rom_elements:
+                if rom_element.get('version') is not '':
+                    first_disc_version = rom_element.get('version')
+                else:
+                    # TODO: Database error!
+                    pass
 
-            if disc_version and disc_number:
-                print('%s matches both version and number: %s, %s.' % (first_disc_name, disc_version.group(0), disc_number.group(0)))
+            disc_version = self.version_regex.search(first_disc_version)
+            disc_number = self.disc_number_regex.search(first_disc_version)
+
+            tiger_woods_2004_versions = ['disc1ukv', 'disc2ukv', 'disc1eur', 'disc2eur']
+            if first_disc_version in tiger_woods_2004_versions:
+                # TODO: Database issue!
+                print('I found Tiger Woods 2004!')
+
+            elif disc_version and disc_number:
+                #print('%s matches both version and number: %s, %s.' % (first_disc_name, disc_version.group(0), disc_number.group(0)))
                 # Multiple versions of a two-disc release. This bit of code is
                 #   pretty much just for Killer7.
                 pass
 
-            elif disc_version:
-                print('%s matches version: %s.' % (first_disc_name, disc_version.group(0)))
-                # It's a normal multi-version release, like Smash.
-                for disc in rom_elements:
-                    disc_info = {}
-                    version_name = disc.get('version')
-                    disc_name = 'disc1'
-
-                    disc_info['md5'] = disc.get('md5')
-
-                    version_info = {disc_name: disc_info}
-
-                    game_versions[version_name] = version_info
-                    print('Added version %s.' % version_name)
-
             elif disc_number:
                 # print('%s matches number: %s.' % (first_disc_name, disc_number.group(0)))
                 # It's a single version two-disc release.
-                pass
+                version_info = {'1.0': {}}
+                # A few games have disc1 labeled as disc0 and disc2 labeled as disc1.
+                #   How confusing...
+                disc0_found = False
+                for rom_element in rom_elements:
+                    version_name = rom_element.get('version')
+                    if '0' in version_name:
+                        # TODO: Database error!
+                        disc_name = 'disc1'
+                        disc0_found = True
 
+                    elif '1' in version_name:
+                        if disc0_found == True:
+                            disc_name = 'disc2'
 
-        elif len(rom_elements) == 1:
+                        else:
+                            disc_name = 'disc1'
+
+                    elif '2' in version_name:
+                        disc_name = 'disc2'
+
+                    else:
+                        print('Erroneous disc name: %s' % rom_element.get('version'))
+                        disc_name = ''
+                    disc_info = self._build_disc_info(rom_element)
+                    version_info['1.0'][disc_name] = disc_info
+
+            elif disc_version:
+                # It's a normal multi-version release, like Smash.
+                for rom_element in rom_elements:
+                    # TODO: Deal with identically named versions, particularly ''.
+                    version_name = rom_element.get('version')
+                    disc_name = 'disc1'
+
+                    version_info = {disc_name: self._build_disc_info(rom_element)}
+
+                    game_versions[version_name] = version_info
+            else:
+                # For now, we can just ignore blank version names as there are
+                #   only a handful of entries that have no version information.
+                #   and they are all database errors.
+                # TODO: Database error!
+                print('Could not get version information, ignoring game: %s.' % rom_elements[0].get('name'))
+                print('Version string: %s.' % first_disc_version)
+                print('Number of discs: %s.' % len(rom_elements))
+
+        elif disc_total == 1:
             # Whew, just one disc and one version.
             # One verison does not necessarily mean 1.0.
             version_name = '1.0'
             disc_name = 'disc1'
-
-            disc_element = rom_elements[0]
-
-            disc_info = {
-                disc_name: {
-                    'size': disc_element.get('size'),
-                    'md5': disc_element.get('md5')
-                    }
-                }
+            rom_element = rom_elements[0]
+            disc_info = { disc_name: self._build_disc_info(rom_element) }
 
             game_versions[version_name] = disc_info
 
-        else: # Assuming rom_elements is an empty list
-            pass
-
+        # Returning None is more useful than returning an empty dict, but
+        #   changing from None to a dict earlier on in the code will get ugly.
         if game_versions == {}:
             game_versions = None
         return game_versions
+
+    def _build_disc_info(self, rom_element):
+        disc_info = {
+            'size': rom_element.get('size'),
+            'crc': rom_element.get('crc'),
+            'md5': rom_element.get('md5'),
+            'sha1': rom_element.get('sha1')
+        }
+        
+        return disc_info
 
 wiidb = WiiDB()
 wiidb.update()
