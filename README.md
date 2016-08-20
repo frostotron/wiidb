@@ -31,7 +31,7 @@ optional arguments, `gameid`, `crc`, `md5`, and `sha1`.  It will retrieve full
 metadata for the game given any of those arguments. 
 
 Here is a full example:
-```
+```python
 import wiidb
 
 wiidb = wiidb.WiiDB(wiidb_file='some_nifty_path.json'))
@@ -41,7 +41,7 @@ print(wiidb.get_game_data(sha1='84318b312fa6138e106da3661154716fb906ba0c'))
 ```
 
 Which will output this: (pretty printing not included)
-```
+```python
 {
   "title": "Killer7",
   "gameid": "GK7E08",
