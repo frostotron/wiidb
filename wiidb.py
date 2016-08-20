@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import json
+import os
 import re
 import urllib3
 import xml.etree.ElementTree as ElementTree
@@ -23,8 +24,19 @@ class WiiDB:
         self.version_regex = re.compile('[0-9]+\.[0-9]+')
         self.disc_number_regex = re.compile('(D|d)isc( |)[0-2]')
 
+        # Try to open the wiidb file, if it fails, then update from wiidb.zip
+        if not(self._read_wiidb()):
+            print('Wiidb not loaded, updating.')
+            self.update()
+        else:
+            print('Wiidb loaded successfully.')
+
     def get_game_data(self, gameid=None, crc=None, md5=None, sha1=None):
-        pass
+        result = None
+        if gameid in self.game_data:
+            result = self.game_data[gameid]
+
+        return result
 
     def update(self):
         # TODO: Work out downloading wiitdb.zip.
@@ -52,6 +64,8 @@ class WiiDB:
             game_info['versions'] = self._divine_version_information(game_element.findall('./rom'))
 
             self.game_data[gameid] = game_info
+
+        self._write_wiidb()
 
     def _divine_version_information(self, rom_elements):
         # Sweet holy mother of Yoshis the version/disc information in this database is awful.
@@ -184,8 +198,35 @@ class WiiDB:
 
         return disc_name
 
-wiidb = WiiDB()
-wiidb.update()
+    def _read_wiidb(self):
+        read_successful = False
+        if os.path.isfile(self.wiidb_file):
+            try:
+                # TODO: Look into changing file IO to use Python's with statement.
+                wiidb_file_handle = open(self.wiidb_file, 'r')
+                wiidb_file_dict = json.loads(wiidb_file_handle.read())
+                wiidb_file_handle.close()
 
-print(json.dumps(wiidb.game_data['GALE01'], indent=2))
-print(json.dumps(wiidb.game_data['GK7E08'], indent=2))
+                self.game_data = wiidb_file_dict['game_data']
+                self.hash_index = wiidb_file_dict['hash_index']
+                read_successful = True
+            except Exception as e:
+                print('Error reading file: %s.' % e)
+
+        return read_successful
+
+    def _write_wiidb(self):
+        dict_to_write = {
+            'game_data': self.game_data,
+            'hash_index': self.hash_index
+        }
+
+        # TODO: Look into changing file IO to use Python's with statement.
+        wiidb_file = open(self.wiidb_file, 'w')
+        wiidb_file.write(json.dumps(dict_to_write, indent=2))
+        wiidb_file.close()
+
+wiidb = WiiDB()
+
+print(json.dumps(wiidb.get_game_data('GALE01'), indent=2))
+print(json.dumps(wiidb.get_game_data('GK7E08'), indent=2))
