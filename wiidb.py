@@ -1,5 +1,20 @@
 #!/usr/bin/env python3
 
+# Copyright 2016 Frosto Tron
+#
+# This program is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     This program is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 import json
 import os
 import re
@@ -259,9 +274,3 @@ class WiiDB:
         wiidb_file = open(self.wiidb_file, 'w')
         wiidb_file.write(json.dumps(dict_to_write, indent=2))
         wiidb_file.close()
-
-wiidb = WiiDB()
-
-print(json.dumps(wiidb.get_game_data('GALE01'), indent=2))
-#print(json.dumps(wiidb.get_game_data('GK7E08'), indent=2))
-print(json.dumps(wiidb.get_game_data(sha1='84318b312fa6138e106da3661154716fb906ba0c'), indent=2))

@@ -1,5 +1,5 @@
 wiitdb.zip
 wiidb.json
-regextest.py
+__pycache__/*
 
 *.swp
