@@ -15,6 +15,7 @@
 #     You should have received a copy of the GNU General Public License
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import io
 import json
 import os
 import re
@@ -69,17 +70,15 @@ class WiiDB:
 
     def update(self):
         # TODO: Work out downloading wiitdb.zip.
-        '''
         print('Downloading new wiitdb.zip.')
-        wiitdb_zip_file = self.http.request('GET', wiitdb_zip_url)
+        wiitdb_zip_data= self.http.request('GET', wiitdb_zip_url)
         print('Download finished.')
-        '''
-        wiitdb_xml = ''
-        wiitdb_zip_file = './wiitdb.zip'
+
         print('Parsing XML...')
-        with zipfile.ZipFile(wiitdb_zip_file) as wiitdb_zip:
-            with wiitdb_zip.open('wiitdb.xml') as wiitdb_xml_file:
-                wiitdb_xml = ElementTree.fromstring(wiitdb_xml_file.read())
+        wiitdb_xml = ''
+        wiitdb_zip = zipfile.ZipFile(io.BytesIO(wiitdb_zip_data.data))
+        with wiitdb_zip.open('wiitdb.xml') as wiitdb_xml_file:
+            wiitdb_xml = ElementTree.fromstring(wiitdb_xml_file.read())
 
         print('Reading game elements.')
         game_elements = wiitdb_xml.findall('./game')
