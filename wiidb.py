@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import json
 import re
 import urllib3
 import xml.etree.ElementTree as ElementTree
@@ -59,17 +60,17 @@ class WiiDB:
         if disc_total > 1:
             # Is it multiple versions? Is it multiple discs? Gametdb doesn't say,
             #   so we have to guess from the "version" name...
-            first_disc_version = ''
+            first_disc_version_string = ''
             # Some of these disc entries have no version name. It looks like gametdb.com needs moderators.
             for rom_element in rom_elements:
                 if rom_element.get('version') is not '':
-                    first_disc_version = rom_element.get('version')
+                    first_disc_version_string = rom_element.get('version')
                 else:
                     # TODO: Database error!
                     pass
 
-            disc_version = self.version_regex.search(first_disc_version)
-            disc_number = self.disc_number_regex.search(first_disc_version)
+            first_disc_version = self.version_regex.search(first_disc_version_string)
+            first_disc_number = self.disc_number_regex.search(first_disc_version_string)
 
             tiger_woods_2004_versions = ['disc1ukv', 'disc2ukv', 'disc1eur', 'disc2eur']
             if first_disc_version in tiger_woods_2004_versions:
@@ -77,13 +78,32 @@ class WiiDB:
                 # Ignore it for now.
                 print('I found Tiger Woods 2004!')
 
-            elif disc_version and disc_number:
+            elif first_disc_version and first_disc_number:
                 # Multiple versions of a two-disc release. This bit of code is
                 #   pretty much just for Killer7.
-                pass
+                game_versions = {}
+                for rom_element in rom_elements:
+                    version_string = rom_element.get('version')
+                    disc_name = self._determine_disc_name( \
+                        self.disc_number_regex.search(version_string).group())
 
-            elif disc_number:
-                # print('%s matches number: %s.' % (first_disc_name, disc_number.group(0)))
+                    version_regex_result = self.version_regex.search( \
+                        rom_element.get('version'))
+                    if version_regex_result == None:
+                        disc_version = 1.0
+                    else:
+                        disc_version = version_regex_result.group()
+
+                    disc_info = self._build_disc_info(rom_element)
+
+                    if not(disc_version in game_versions.keys()):
+                        game_versions[disc_version] = {}
+
+                    game_versions[disc_version][disc_name] = self._build_disc_info(rom_element)
+                    
+
+            elif first_disc_number:
+                # print('%s matches number: %s.' % (first_disc_name, first_disc_number.group(0)))
                 # It's a single version two-disc release.
                 # TODO: Probably put the Tiger Woods 2004 version and name-determining
                 #   bits in this block.
@@ -92,29 +112,11 @@ class WiiDB:
                 #   How confusing...
                 disc0_found = False
                 for rom_element in rom_elements:
-                    version_name = rom_element.get('version')
-                    if '0' in version_name:
-                        # TODO: Database error!
-                        disc_name = 'disc1'
-                        disc0_found = True
-
-                    elif '1' in version_name:
-                        if disc0_found == True:
-                            disc_name = 'disc2'
-
-                        else:
-                            disc_name = 'disc1'
-
-                    elif '2' in version_name:
-                        disc_name = 'disc2'
-
-                    else:
-                        print('Erroneous disc name: %s' % rom_element.get('version'))
-                        disc_name = ''
+                    disc_name = self._determine_disc_name(rom_element.get('version'))
                     disc_info = self._build_disc_info(rom_element)
                     game_versions['1.0'][disc_name] = disc_info
 
-            elif disc_version:
+            elif first_disc_version:
                 # It's a normal multi-version release, like Smash.
                 for rom_element in rom_elements:
                     # TODO: Deal with identically named versions, particularly ''.
@@ -159,7 +161,31 @@ class WiiDB:
         
         return disc_info
 
+    def _determine_disc_name(self, version_string):
+        disc_name = ''
+        disc0_found = False
+        if '0' in version_string:
+            # TODO: Database error!
+            disc_name = 'disc1'
+            disc0_found = True
+
+        elif '1' in version_string:
+            if disc0_found == True:
+                disc_name = 'disc2'
+
+            else:
+                disc_name = 'disc1'
+
+        elif '2' in version_string:
+            disc_name = 'disc2'
+
+        else:
+            print('Erroneous disc name: %s' % rom_element.get('version'))
+
+        return disc_name
+
 wiidb = WiiDB()
 wiidb.update()
 
-print(wiidb.game_data['GALE01'])
+print(json.dumps(wiidb.game_data['GALE01'], indent=2))
+print(json.dumps(wiidb.game_data['GK7E08'], indent=2))
