@@ -9,5 +9,5 @@ setuptools.setup(
     author_email = 'frostotron@post.com',
     description = 'A Python library for downloading and processing wiitdb.zip from gametdb.com',
     license = 'GPL3',
-    packages = ['wiidb']
+    packages = ['wiidb', 'tests']
 )
