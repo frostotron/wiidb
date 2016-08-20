@@ -136,7 +136,7 @@ class WiiDB:
                     version_regex_result = self.version_regex.search( \
                         rom_element.get('version'))
                     if version_regex_result == None:
-                        disc_version = 1.0
+                        disc_version = '1.0'
                     else:
                         disc_version = version_regex_result.group()
 

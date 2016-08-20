@@ -1,7 +1,7 @@
 wiitdb.zip
 wiidb.json
 
-__pycache__/*
+__pycache__/
 build/*
 dist/*
 wiidb.egg-info/*
