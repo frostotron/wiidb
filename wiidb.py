@@ -19,7 +19,9 @@ class WiiDB:
         self.wiidb_file = wiidb_file
         self.http = urllib3.PoolManager()
         self.game_data = {}
-        self.hash_index = []
+        # crc, md5, and sha1 hashes all have different lenghts, so there's no
+        #   need for separate dicts.
+        self.hash_index = {}
 
         self.version_regex = re.compile('[0-9]+\.[0-9]+')
         self.disc_number_regex = re.compile('(D|d)isc( |)[0-2]')
@@ -33,6 +35,18 @@ class WiiDB:
 
     def get_game_data(self, gameid=None, crc=None, md5=None, sha1=None):
         result = None
+        if not(gameid):
+            gameid = None
+
+        if crc in self.hash_index:
+            gameid = self.hash_index[crc]
+
+        if md5 in self.hash_index:
+            gameid = self.hash_index[md5]
+
+        if sha1 in self.hash_index:
+            gameid = self.hash_index[sha1]
+
         if gameid in self.game_data:
             result = self.game_data[gameid]
 
@@ -63,8 +77,12 @@ class WiiDB:
 
             game_info['versions'] = self._divine_version_information(game_element.findall('./rom'))
 
-            self.game_data[gameid] = game_info
+            if not(gameid == None):
+                self.game_data[gameid] = game_info
+            else:
+                print('Game %s does not have a gameid, ignoring.' % game_info['title'])
 
+        self._build_hash_index()
         self._write_wiidb()
 
     def _divine_version_information(self, rom_elements):
@@ -198,6 +216,22 @@ class WiiDB:
 
         return disc_name
 
+    def _build_hash_index(self):
+        for game in self.game_data.items():
+            if game[1]['versions']:
+                for version in game[1]['versions'].items():
+                    for disc in version[1].items():
+                        if disc[1]['crc']:
+                            self.hash_index[disc[1]['crc']] = game[0]
+                        if disc[1]['md5']:
+                            self.hash_index[disc[1]['md5']] = game[0]
+                        if disc[1]['sha1']:
+                            self.hash_index[disc[1]['sha1']] = game[0]
+            else:
+                # This should not, and currently does not happen.
+                # TODO: Database error!
+                print('Game %s does not have version information.' % game[1]['title'])
+
     def _read_wiidb(self):
         read_successful = False
         if os.path.isfile(self.wiidb_file):
@@ -229,4 +263,5 @@ class WiiDB:
 wiidb = WiiDB()
 
 print(json.dumps(wiidb.get_game_data('GALE01'), indent=2))
-print(json.dumps(wiidb.get_game_data('GK7E08'), indent=2))
+#print(json.dumps(wiidb.get_game_data('GK7E08'), indent=2))
+print(json.dumps(wiidb.get_game_data(sha1='84318b312fa6138e106da3661154716fb906ba0c'), indent=2))
