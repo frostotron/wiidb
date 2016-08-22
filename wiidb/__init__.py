@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright 2016 Frosto Tron
+# Copyright 2016 frostotron
 #
 # This program is free software: you can redistribute it and/or modify
 #     it under the terms of the GNU General Public License as published by
@@ -29,13 +29,14 @@ import zipfile
 # This is currently only designed to handle disc images, so wiiware titles
 #   are just extra junk to process for now.
 wiitdb_zip_url = 'http://www.gametdb.com/wiitdb.zip?LANG=EN&GAMECUBE=1'
+default_wiidb_file = '~/.share/wiidb.json'
 
 class WiiDB:
-    def __init__(self, wiidb_file='./wiidb.json'):
+    def __init__(self, wiidb_file=default_wiidb_file):
         self.wiidb_file = wiidb_file
         self.http = urllib3.PoolManager()
         self.game_data = {}
-        # crc, md5, and sha1 hashes all have different lenghts, so there's no
+        # crc, md5, and sha1 hashes all have different lengths, so there's no
         #   need for separate dicts.
         self.hash_index = {}
 
