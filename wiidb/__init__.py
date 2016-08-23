@@ -257,10 +257,8 @@ class WiiDB:
         read_successful = False
         if os.path.isfile(self.wiidb_file):
             try:
-                # TODO: Look into changing file IO to use Python's with statement.
-                wiidb_file_handle = open(self.wiidb_file, 'r')
-                wiidb_file_dict = json.loads(wiidb_file_handle.read())
-                wiidb_file_handle.close()
+                with open(self.wiidb_file, 'r') as wiidb_file_handle:
+                    wiidb_file_dict = json.loads(wiidb_file_handle.read())
 
                 self.game_data = wiidb_file_dict['game_data']
                 self.hash_index = wiidb_file_dict['hash_index']
@@ -276,7 +274,5 @@ class WiiDB:
             'hash_index': self.hash_index
         }
 
-        # TODO: Look into changing file IO to use Python's with statement.
-        wiidb_file = open(self.wiidb_file, 'w')
-        wiidb_file.write(json.dumps(dict_to_write, indent=2))
-        wiidb_file.close()
+        with open(self.wiidb_file, 'w') as wiidb_file_handle:
+            wiidb_file_handle.write(json.dumps(dict_to_write, indent=2))
