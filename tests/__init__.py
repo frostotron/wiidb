@@ -33,7 +33,8 @@ class LowEffortTestGroup(unittest.TestCase):
           },
           "region": "NTSC-J",
           "gameid": "SDWJ18",
-          "title": "Lost in Shadow"
+          "title": "Lost in Shadow",
+          "platform": "Wii"
         }
 
         self.assertEqual(expected_metadata, self.wiidb.get_game_data(gameid='SDWJ18'))
@@ -72,7 +73,8 @@ class LowEffortTestGroup(unittest.TestCase):
           },
           "region": "NTSC-U",
           "gameid": "GK7E08",
+          "platform": "GameCube",
           "title": "Killer7"
         }
 
-        self.assertEqual(expected_metadata, self.wiidb.get_game_data(gameid='GK7E08'))
+        self.assertEqual(expected_metadata, self.wiidb.get_game_data(md5='7393ca0cef0ff815803aeaeaa3a31a8c'))

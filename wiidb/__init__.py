@@ -33,7 +33,7 @@ default_wiidb_file = '~/.share/wiidb.json'
 
 class WiiDB:
     def __init__(self, wiidb_file=default_wiidb_file):
-        self.wiidb_file = wiidb_file
+        self.wiidb_file = os.path.expanduser(wiidb_file)
         self.http = urllib3.PoolManager()
         self.game_data = {}
         # crc, md5, and sha1 hashes all have different lengths, so there's no
@@ -89,6 +89,12 @@ class WiiDB:
             game_info['title'] = game_element.find('./locale[@lang=\'EN\']/title').text
             game_info['gameid'] = gameid
             game_info['region'] = game_element.find('./region').text
+
+            platform =  game_element.find('./type').text
+            if platform == None:
+                game_info['platform'] = 'Wii'
+            else:
+                game_info['platform'] = platform
 
             game_info['versions'] = self._divine_version_information(game_element.findall('./rom'))
 
