@@ -17,6 +17,7 @@
 
 import io
 import json
+import logging
 import os
 import re
 import urllib3
@@ -33,6 +34,7 @@ default_wiidb_file = '~/.share/wiidb.json'
 
 class WiiDB:
     def __init__(self, wiidb_file=default_wiidb_file):
+        self.logger = logging.getLogger('WiiDB')
         self.wiidb_file = os.path.expanduser(wiidb_file)
         self.http = urllib3.PoolManager()
         self.game_data = {}
@@ -45,14 +47,15 @@ class WiiDB:
 
         # Try to open the wiidb file, if it fails, then update from wiidb.zip
         if not(self._read_wiidb()):
-            print('Wiidb not loaded, updating.')
+            self.logger.info('Wiidb not loaded, updating.')
             self.update()
         else:
-            print('Wiidb loaded successfully.')
+            self.logger.info('Wiidb loaded successfully.')
 
     def get_game_data(self, gameid=None, crc=None, md5=None, sha1=None):
         result = None
         if not(gameid):
+            self.logger.debug('No explicit gameid provided.')
             gameid = None
 
         if crc in self.hash_index:
@@ -71,17 +74,17 @@ class WiiDB:
 
     def update(self):
         # TODO: Work out downloading wiitdb.zip.
-        print('Downloading new wiitdb.zip.')
+        self.logger.info('Downloading new wiitdb.zip.')
         wiitdb_zip_data= self.http.request('GET', wiitdb_zip_url)
-        print('Download finished.')
+        self.logger.debug('Download finished.')
 
-        print('Parsing XML...')
+        self.logger.info('Parsing XML...')
         wiitdb_xml = ''
         wiitdb_zip = zipfile.ZipFile(io.BytesIO(wiitdb_zip_data.data))
         with wiitdb_zip.open('wiitdb.xml') as wiitdb_xml_file:
             wiitdb_xml = ElementTree.fromstring(wiitdb_xml_file.read())
 
-        print('Reading game elements.')
+        self.logger.debug('Reading game elements.')
         game_elements = wiitdb_xml.findall('./game')
         for game_element in game_elements:
             game_info = {}
@@ -101,7 +104,7 @@ class WiiDB:
             if not(gameid == None):
                 self.game_data[gameid] = game_info
             else:
-                print('Game %s does not have a gameid, ignoring.' % game_info['title'])
+                self.logger.warn('Game %s does not have a gameid, ignoring.' % game_info['title'])
 
         self._build_hash_index()
         self._write_wiidb()
@@ -129,7 +132,7 @@ class WiiDB:
             if first_disc_version in tiger_woods_2004_versions:
                 # TODO: Database issue!
                 # Ignore it for now.
-                print('I found Tiger Woods 2004!')
+                self.logger.debug('I found Tiger Woods 2004!')
 
             elif first_disc_version and first_disc_number:
                 # Multiple versions of a two-disc release. This bit of code is
@@ -156,7 +159,6 @@ class WiiDB:
                     
 
             elif first_disc_number:
-                # print('%s matches number: %s.' % (first_disc_name, first_disc_number.group(0)))
                 # It's a single version two-disc release.
                 # TODO: Probably put the Tiger Woods 2004 version and name-determining
                 #   bits in this block.
@@ -184,9 +186,9 @@ class WiiDB:
                 #   only a handful of entries that have no version information.
                 #   and they are all database errors.
                 # TODO: Database error!
-                print('Could not get version information, ignoring game: %s.' % rom_elements[0].get('name'))
-                print('Version string: %s.' % first_disc_version)
-                print('Number of discs: %s.' % len(rom_elements))
+                self.logger.error('Could not get version information, ignoring game: %s.' % rom_elements[0].get('name'))
+                self.logger.debug('Version string: %s.' % first_disc_version)
+                self.logger.debug('Number of discs: %s.' % len(rom_elements))
 
         elif disc_total == 1:
             # Whew, just one disc and one version.
@@ -233,7 +235,7 @@ class WiiDB:
             disc_name = 'disc2'
 
         else:
-            print('Erroneous disc name: %s' % rom_element.get('version'))
+            self.logger.error('Erroneous disc name: %s' % rom_element.get('version'))
 
         return disc_name
 
@@ -251,7 +253,7 @@ class WiiDB:
             else:
                 # This should not, and currently does not happen.
                 # TODO: Database error!
-                print('Game %s does not have version information.' % game[1]['title'])
+                self.logger.error('Game %s does not have version information.' % game[1]['title'])
 
     def _read_wiidb(self):
         read_successful = False
@@ -264,7 +266,7 @@ class WiiDB:
                 self.hash_index = wiidb_file_dict['hash_index']
                 read_successful = True
             except Exception as e:
-                print('Error reading file: %s.' % e)
+                self.logger.critical('Error reading file: %s.' % e)
 
         return read_successful
 
