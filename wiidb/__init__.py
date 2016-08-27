@@ -95,8 +95,13 @@ class WiiDB:
 
             platform =  game_element.find('./type').text
             if platform == None:
-                game_info['platform'] = 'Wii'
+                game_info['platform'] = 'wii'
+
+            elif platform == 'GameCube':
+                game_info['platform'] = 'gcn'
+
             else:
+                # TODO: Database error!
                 game_info['platform'] = platform
 
             game_info['versions'] = self._divine_version_information(game_element.findall('./rom'))
@@ -146,7 +151,7 @@ class WiiDB:
                     version_regex_result = self.version_regex.search( \
                         rom_element.get('version'))
                     if version_regex_result == None:
-                        disc_version = '1.0'
+                        disc_version = '1.00'
                     else:
                         disc_version = version_regex_result.group()
 
@@ -162,14 +167,14 @@ class WiiDB:
                 # It's a single version two-disc release.
                 # TODO: Probably put the Tiger Woods 2004 version and name-determining
                 #   bits in this block.
-                game_versions['1.0'] = {}
+                game_versions['1.00'] = {}
                 # A few games have disc1 labeled as disc0 and disc2 labeled as disc1.
                 #   How confusing...
                 disc0_found = False
                 for rom_element in rom_elements:
                     disc_name = self._determine_disc_name(rom_element.get('version'))
                     disc_info = self._build_disc_info(rom_element)
-                    game_versions['1.0'][disc_name] = disc_info
+                    game_versions['1.00'][disc_name] = disc_info
 
             elif first_disc_version:
                 # It's a normal multi-version release, like Smash.
@@ -192,10 +197,13 @@ class WiiDB:
 
         elif disc_total == 1:
             # Whew, just one disc and one version.
-            # One verison does not necessarily mean 1.0.
-            version_name = '1.0'
+            # TODO: One verison does not necessarily mean 1.00.
             disc_name = 'disc1'
             rom_element = rom_elements[0]
+            version_name = rom_element.get('version')
+            if version_name == None:
+                version_name = '1.00'
+
             disc_info = { disc_name: self._build_disc_info(rom_element) }
 
             game_versions[version_name] = disc_info
